@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "\nاحد اسرار عشقي للغة الـ R هو شعوري بأنه لا يوجد حد لما استطيع فعله بهذه اللغة الرائعة. \nاليوم سوف استعرض لكم احد تلك الإمكانيات الا وهي صنع تصويرات بيانية تفاعلية. نعم لقد قرأت تلك الجملة بشكل صحيح. R بإمكانه أن يكون تفاعلي. في الحقيقة هناك الكثير من الحزم التي تمكننا من فعل ذلك لكنني لن استعرضها كلها فذلك يستحق كتاب بذاته.\n\n### حركة الـ HTMLWIDGETS \nمؤخرا انتشرت حركة في وسط مجتمع مطوري حزم لغة R خصوصا المهتمين بالتصوير البياني. تلك الحركة تهدف إلى جلب قوة Java Script  الرائعة في صنع مختلف الرسومات والتصويرات البيانية على صفحات الويب و ترويضها لتعمل بتناغم تام مع لغة R . تلك الحركة انجبت لنا ما يعرف الآن بـ [HTMLWIDGETS](https//www.htmlwidgets.com)\n\n####مثال واردات المملكة\nدعنا نحاول ان نمثل واردات المملكة على خريطة تفاعلية حيث يمكننا التصغير و التكبير وحتى سحب الخريطة نفسها.\nسنقوم بذلك عن طريق اتباع الخطوات التالية : \n\n1. تحميل المعلومات من موقع [هيئة الإحصاء](https://www.stats.gov.sa/ar/214)\n\n```{r}\nsa.imp <- read.csv(\"Saudi_Imports.csv\", sep = \",\", header = TRUE)\n\n```\n\n2. إرفاق بعض الحزم المهمة\n\n```{r message=FALSE}\nlibrary(\"dplyr\") # لمعالجة البيانات\nlibrary(\"stringi\") # حزمة متخصصة لمعالجة النصوص\nlibrary(\"leaflet\") # لرسم الخرائط التفاعلية\nlibrary(\"sp\") # حزمة مساعدة للرسم على الخرائط\nlibrary(\"maps\") # معلومات عن الدول وعواصمها\nlibrary(\"widgetframe\")\n```\n\n3. حساب مجموع قيمة الواردات إلى المملكة\n\n```{r}\ngrouped.imports<- sa.imp %>% group_by(Country.Name) %>% summarise(grand.total = sum(Value))\n```\n\n4. كتابة دالة لإستخراج احداثيات عاصمة اي دولة\n- نحتاج هذه العملية لرسم الخطوط بين المملكة وباقي الدول و لأن بعض الدول كبيرة جدا يتوجب علينا تحديد بداية كل خط \n- لذلك اخترنا بداية الخط لتكون العاصمة في تلك الدول\n\n```{r}\nget.capital.location <- function(c.n) {\n  x <-filter(world.cities, country.etc == c.n, capital == 1)\n  return(x[,5:4])\n}\n\n```\n\n5. معالجة الأسماء الموجودة في البيانات من هيئة الإحصاء لتتوافق مع حزمة maps\n\n```{r}\nds<-sapply(stri_trans_totitle(grouped.imports$Country.Name),get.capital.location)\nds.1 <- t(ds)\n```\n\n6. معالجة بعض اسماء الدول يدويا\n\n```{r, warning=FALSE}\nds.1[\"United Kingdom\",] <- get.capital.location(\"UK\")\nds.1[\"U.s.a\",] <- get.capital.location(\"USA\")\nds.1[\"Sultanate Of Oman\",] <- get.capital.location(\"Oman\")\nds.1[\"Russian Federation\",] <- get.capital.location(\"Russia\")\nds.1[,1]<-as.numeric(as.character(ds.1[,1]))\nds.1[,2]<-as.numeric(as.character(ds.1[,2]))\nds.c <- matrix(unlist(ds.1), ncol = 2)\nrownames(ds.c) <-rownames(ds.1)\nds.c <- ds.c[!is.na(ds.c[,1]),]\n\n```\n\n7. كتابة دالة متخصص في ربط كل إحداثية عاصمة بالرياض\n\n```{r}\ncreat.line2sa <- function(x) {\n  return(Line(rbind(\n    get.capital.location(\"Saudi Arabia\"), x, make.row.names = TRUE\n    )))\n  \n}\n\n```\n\n8. إعداد قائمة الخطوط ومعالجتها لتكون جاهزة للتصوير الجيوغرافي\n\n```{r}\nlines.list <-lapply(seq_along(ds.c[,1]), function(inex, x) {(creat.line2sa(ds.c[inex,]))}, x=ds.c)\n```\n\n9. اخيرا رسم الخريطة التفاعلية مع جميع خطوط واردات المملكة\n\n```{r echo=FALSE}\n# For all practicle purposes this should always be FALSE \nknitr::opts_chunk$set(widgetframe_self_contained = TRUE) # default = FALSE\n\n# For all practicle purposes this should always be TRUE \nknitr::opts_chunk$set(widgetframe_isolate_widgets = FALSE) # default = TRUE\n```\n\n```{r, message=FALSE}\n\nmapp<-leaflet() %>% addTiles()  %>% addPolylines(data =SpatialLines(list(Lines(lines.list, \"ID\"))), highlightOptions = highlightOptions( color='#00ff00', opacity = 1, weight = 2, fillOpacity = 1,\nbringToFront = TRUE, sendToBack = TRUE)) \nframeWidget(mapp, height = 350, width = '95%')\n\nSpatialLines(list(Lines(lines.list, \"ID\")))\n```\n\n\n\n\n",
+    "created" : 1511207931782.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2680714582",
+    "id" : "24E292FD",
+    "lastKnownWriteTime" : 1511510935,
+    "last_content_update" : 1511877949664,
+    "path" : "~/Documents/ArabianAnalyst/HTMLWIDGETS/htmlwidgets.Rmd",
+    "project_path" : "htmlwidgets.Rmd",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}
